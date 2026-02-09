@@ -49,3 +49,19 @@ def fetch_documents():
 
     conn.close()
     return rows
+
+
+
+def get_document_by_id(doc_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT file_path FROM documents WHERE id = ?",
+        (doc_id)
+    )
+
+    result = cursor.fetchone()
+    conn.close()
+
+    return result[0] if result else None
