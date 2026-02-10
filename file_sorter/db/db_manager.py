@@ -23,8 +23,8 @@ def create_table():
         """
     )
 
-    conn.commit
-    conn.close
+    conn.commit()
+    conn.close()
 
 def insert_document(title, file_path, source,):
     conn = get_connection()
@@ -58,10 +58,31 @@ def get_document_by_id(doc_id):
 
     cursor.execute(
         "SELECT file_path FROM documents WHERE id = ?",
-        (doc_id)
+        (doc_id,)
     )
 
     result = cursor.fetchone()
     conn.close()
 
     return result[0] if result else None
+
+
+
+
+
+
+
+
+
+def document_exists(file_path):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT 1 FROM documents WHERE file_path = ?",
+        (file_path,)
+    )
+
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
