@@ -1,88 +1,75 @@
 import sqlite3
-import os
-from datetime import datetime
 
 DB_NAME = "documents.db"
 
-def get_connection():
+
+def connect_db():
     return sqlite3.connect(DB_NAME)
 
+
 def create_table():
-    conn = get_connection()
+    conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS documents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        file_path TEXT NOT NULL,
-        source TEXT,
-        date_added TEXT
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            path TEXT UNIQUE,
+            source TEXT,
+            letter_type TEXT,
+            date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
-    )
+    """)
 
     conn.commit()
     conn.close()
 
-def insert_document(title, file_path, source,):
-    conn = get_connection()
+
+def insert_document(title, path, source, letter_type):
+    conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO documents (title, file_path, source, date_added)
+    cursor.execute("""
+        INSERT OR IGNORE INTO documents (title, path, source, letter_type)
         VALUES (?, ?, ?, ?)
-        """, (title, file_path, source, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    )
+    """, (title, path, source, letter_type))
 
     conn.commit()
     conn.close()
+
 
 def fetch_documents():
-    conn = get_connection()
+    conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM documents")
-    rows = cursor.fetchall()
+    cursor.execute("""
+        SELECT id, title, path, source, letter_type, date_added
+        FROM documents
+    """)
 
+    rows = cursor.fetchall()
     conn.close()
     return rows
 
 
-
 def get_document_by_id(doc_id):
-    conn = get_connection()
+    conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT file_path FROM documents WHERE id = ?",
-        (doc_id,)
-    )
-
+    cursor.execute("SELECT path FROM documents WHERE id = ?", (doc_id,))
     result = cursor.fetchone()
-    conn.close()
 
+    conn.close()
     return result[0] if result else None
 
 
-
-
-
-
-
-
-
-def document_exists(file_path):
-    conn = get_connection()
+def document_exists(path):
+    conn = connect_db()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT 1 FROM documents WHERE file_path = ?",
-        (file_path,)
-    )
+    cursor.execute("SELECT id FROM documents WHERE path = ?", (path,))
+    result = cursor.fetchone()
 
-    exists = cursor.fetchone() is not None
     conn.close()
-    return exists
+    return result is not None
