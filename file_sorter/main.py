@@ -16,6 +16,14 @@ from utils.drive_scanner import get_available_drives
 
 # 🔥 Initialize database
 create_table()
+def create_folder(folder_path):
+    """Create a folder if it doesn't exist"""
+    try:
+        os.makedirs(folder_path, exist_ok=True)
+        return True
+    except Exception as e:
+        messagebox.showerror("Folder Creation Error", str(e))
+        return False 
 
 
 def load_documents(filter_text=""):
@@ -111,6 +119,10 @@ def auto_scan_drives():
     for drive in drives:
         if drive.upper().startswith("C:"):
             continue
+        
+        # Create organized folder structure 
+        organized_folder = os.path.join(drive, "Organized_PDFs")
+        create_folder(organized_folder)
 
         pdfs = scan_pdfs(drive)
 
@@ -121,6 +133,10 @@ def auto_scan_drives():
             title = os.path.basename(pdf_path)
             source = "USB"
             letter_type = classify_letter(pdf_path)
+            
+            # Create a subfolder for each letter type 
+            letter_type = os.path.join(organized_folder, letter_type)
+            create_folder(letter_type_folder)
 
             insert_document(title, pdf_path, source, letter_type)
             total_saved += 1
