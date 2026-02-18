@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import os
+from datetime import datetime
 
 from db.db_manager import (
     create_table,
@@ -11,11 +12,12 @@ from db.db_manager import (
 )
 
 from utils.pdf_classifier import classify_letter
-from utils.file_scanner import scan_pdfs
+from utils.file_scanner import scan_documents
 from utils.drive_scanner import get_available_drives
 
 # 🔥 Initialize database
 create_table()
+current_sort = {"column": None, "reverse": False}
 def create_folder(folder_path):
     """Create a folder if it doesn't exist"""
     try:
@@ -46,31 +48,74 @@ def load_documents(filter_text=""):
             ))
 
 
+import shutil
+
+def get_file_type_folder(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+
+    if ext == ".pdf":
+        return "PDF"
+    elif ext == ".docx":
+        return "Word"
+    elif ext == ".xlsx":
+        return "Excel"
+    elif ext == ".pptx":
+        return "PowerPoint"
+    else:
+        return "Other"
+
+
+
 def select_folder():
     folder = filedialog.askdirectory(title="Select Folder")
     if not folder:
         return
 
-    pdfs = scan_pdfs(folder)
+    files = scan_documents(folder)
 
-    if not pdfs:
-        messagebox.showwarning("No PDFs", "No PDF files found in this folder")
+    if not files:
+        messagebox.showwarning("No Files", "No supported documents found.")
         return
 
+    sorted_root = os.path.join(folder, "Sorted_Documents")
+    create_folder(sorted_root)
+
     count = 0
-    for pdf_path in pdfs:
-        if document_exists(pdf_path):
+    for file_path in files:
+        if document_exists(file_path):
             continue
 
-        title = os.path.basename(pdf_path)
-        source = "USB" if ":\\" in pdf_path else "HDD"
-        letter_type = classify_letter(pdf_path)
+        filename = os.path.basename(file_path)
+        source = "USB" if ":\\" in file_path else "HDD"
 
-        insert_document(title, pdf_path, source, letter_type)
+        # 🔹 LEVEL 1: File Type Folder
+        type_folder_name = get_file_type_folder(file_path)
+        type_folder = os.path.join(sorted_root, type_folder_name)
+        create_folder(type_folder)
+
+        # 🔹 Classify document content
+        classification = classify_letter(file_path)
+
+        # 🔹 LEVEL 2: Classification Folder
+        class_folder = os.path.join(type_folder, classification)
+        create_folder(class_folder)
+
+        # Final destination
+        new_path = os.path.join(class_folder, filename)
+
+        try:
+            shutil.move(file_path, new_path)
+        except:
+            new_path = file_path  # fallback
+
+        insert_document(filename, new_path, source, classification)
         count += 1
 
-    messagebox.showinfo("Success", f"{count} PDFs registered successfully")
+    messagebox.showinfo("Success", f"{count} files sorted into 2-level folders.")
     load_documents()
+
+
+
 
 
 def search_documents():
@@ -119,52 +164,80 @@ def auto_scan_drives():
     for drive in drives:
         if drive.upper().startswith("C:"):
             continue
-        
-        # Create organized folder structure 
-        organized_folder = os.path.join(drive, "Organized_PDFs")
-        create_folder(organized_folder)
 
-        pdfs = scan_pdfs(drive)
+        sorted_root = os.path.join(drive, "Sorted_Documents")
+        create_folder(sorted_root)
 
-        for pdf_path in pdfs:
-            if document_exists(pdf_path):
+        files = scan_documents(drive)
+
+        for file_path in files:
+            if document_exists(file_path):
                 continue
 
-            title = os.path.basename(pdf_path)
+            filename = os.path.basename(file_path)
             source = "USB"
-            letter_type = classify_letter(pdf_path)
-            
-            # Create a subfolder for each letter type 
-            letter_type = os.path.join(organized_folder, letter_type)
-            create_folder(letter_type_folder)
 
-            insert_document(title, pdf_path, source, letter_type)
+            # LEVEL 1: File type
+            type_folder_name = get_file_type_folder(file_path)
+            type_folder = os.path.join(sorted_root, type_folder_name)
+            create_folder(type_folder)
+
+            # LEVEL 2: Classification
+            classification = classify_letter(file_path)
+            class_folder = os.path.join(type_folder, classification)
+            create_folder(class_folder)
+
+            new_path = os.path.join(class_folder, filename)
+
+            try:
+                shutil.move(file_path, new_path)
+            except:
+                new_path = file_path
+
+            insert_document(filename, new_path, source, classification)
             total_saved += 1
 
     messagebox.showinfo(
         "Auto Scan Complete",
-        f"{total_saved} new PDF files were registered."
+        f"{total_saved} files sorted with 2-level folders."
     )
 
     load_documents()
 
 
+
+
+    
+    
+def sort_by_type():
+    """Sort documents by letter type"""
+    current_sort["column"] = "Letter Type"
+    current_sort["reverse"] = not current_sort["reverse"]
+    load_documents(sort_by="letter_type")
+    
+    
+def sort_by_date():
+    """Sort documents by date added"""
+    current_sort["column"] = "Date Added"
+    current_sort["reverse"] = not current_sort["reverse"]
+    load_documents(sort_by="date_added")
+
+
 # ---------------- GUI ---------------- #
 
 root = tk.Tk()
-root.title("PDF Sorter")
+root.title("Document Sorter")
 root.geometry("1000x550")
 root.resizable(False, False)
 
-title_lbl = tk.Label(
-    root, text="PDF Sorter", font=("Arial", 24, "bold")
-)
+title_lbl = tk.Label(root, text="Document Sorter", font=("Arial", 24, "bold"))
+
 title_lbl.pack(pady=10)
 
 top_frame = tk.Frame(root)
 top_frame.pack(pady=10)
 
-tk.Button(top_frame, text="➕ Add PDFs",
+tk.Button(top_frame, text="➕ Add Documents",
           command=select_folder, width=15).grid(row=0, column=0, padx=5)
 
 tk.Button(top_frame, text="⚡ Auto Scan USB",

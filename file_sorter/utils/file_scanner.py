@@ -1,19 +1,14 @@
 import os
 
-def scan_pdfs(folder_path):
-    """
-    Scan the given folder for PDF files.
-    Returns a list of full file paths.
-    """
+SUPPORTED_EXTENSIONS = (".pdf", ".docx", ".xlsx", ".pptx")
 
-    pdf_files = []
-    if not os.path.exists(folder_path):
-        return  pdf_files
-    
-    for root, dirs, files in os.walk(folder_path):
+def scan_documents(folder_path):
+    """Scan folder for supported documents"""
+    found_files = []
+
+    for root, _, files in os.walk(folder_path):
         for file in files:
-            if file.lower().endswith(".pdf"):
-                full_path = os.path.join(root, file)
-                pdf_files.append(full_path)
+            if file.lower().endswith(SUPPORTED_EXTENSIONS):
+                found_files.append(os.path.join(root, file))
 
-    return pdf_files
+    return found_files
