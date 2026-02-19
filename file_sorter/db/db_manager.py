@@ -73,3 +73,34 @@ def document_exists(path):
 
     conn.close()
     return result is not None
+
+
+def get_categories():
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT letter_type, COUNT(*) 
+        FROM documents 
+        GROUP BY letter_type
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def get_documents_by_category(category):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, title, path, source, letter_type, date_added
+        FROM documents
+        WHERE letter_type = ?
+    """, (category,))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
