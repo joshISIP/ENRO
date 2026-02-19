@@ -13,7 +13,8 @@ from db.db_manager import (
 
 from utils.pdf_classifier import classify_letter
 from utils.file_scanner import scan_documents
-from utils.drive_scanner import get_available_drives
+from utils.drive_scanner import get_available_drives 
+from utils.audit_logger import log_action  
 
 # 🔥 Initialize database
 create_table()
@@ -110,6 +111,8 @@ def select_folder():
 
         insert_document(filename, new_path, source, classification)
         count += 1
+        
+        log_action("ADD", filename, f"Source: {source}, Type: {classification}")
 
     messagebox.showinfo("Success", f"{count} files sorted into 2-level folders.")
     load_documents()
@@ -151,9 +154,16 @@ def open_selected_file():
         return
 
     try:
-        os.startfile(file_path)  # Windows default opener
+        os.startfile(file_path)
+        log_action(
+            "OPEN",
+            os.path.basename(file_path),
+            "File opened by user"
+        )
     except Exception as e:
+        log_action("ERROR", os.path.basename(file_path), str(e))
         messagebox.showerror("Open Error", str(e))
+
 
 
 
@@ -162,6 +172,7 @@ def auto_scan_drives():
     total_saved = 0
 
     for drive in drives:
+        log_action("AUTO_SCAN", "", F"Scanning drive {drive}")
         if drive.upper().startswith("C:"):
             continue
 
@@ -195,6 +206,7 @@ def auto_scan_drives():
                 new_path = file_path
 
             insert_document(filename, new_path, source, classification)
+            log_action("ADD", filename, f"Auto scanned from USB → {classification}")
             total_saved += 1
 
     messagebox.showinfo(
@@ -203,7 +215,7 @@ def auto_scan_drives():
     )
 
     load_documents()
-
+ 
 
 
 
@@ -221,6 +233,14 @@ def sort_by_date():
     current_sort["column"] = "Date Added"
     current_sort["reverse"] = not current_sort["reverse"]
     load_documents(sort_by="date_added")
+    
+    
+def open_audit_trail():
+    if os.path.exists("audit_trail.log"):
+        os.startfile("audit_trail.log")
+        
+    else:
+        messagebox.showinfo("Audit log", "No audit log found yet.")
 
 
 # ---------------- GUI ---------------- #
@@ -248,6 +268,8 @@ search_entry.grid(row=0, column=2, padx=5)
 
 tk.Button(top_frame, text="🔍 Search",
           command=search_documents, width=10).grid(row=0, column=3, padx=5)
+
+tk.Button(top_frame, text="📄 Audit Trail", command=open_audit_trail, width=15).grid(row=0, column=4, padx=5)
 
 
 columns = ("ID", "Title", "Letter Type", "Path", "Source", "Date Added")
