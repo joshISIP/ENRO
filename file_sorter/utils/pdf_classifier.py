@@ -1,96 +1,97 @@
-import os
 import PyPDF2
-from docx import Document
-from openpyxl import load_workbook
-from pptx import Presentation
 
-
-# ---------------- TEXT EXTRACTORS ---------------- #
-
+# ===============================
+# PDF TEXT EXTRACTOR
+# ===============================
 def extract_text_from_pdf(path):
     text = ""
     try:
         with open(path, "rb") as file:
             reader = PyPDF2.PdfReader(file)
             for page in reader.pages:
-                text += page.extract_text() or ""
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + " "
     except:
         pass
+
     return text.lower()
 
 
-def extract_text_from_docx(path):
-    text = ""
-    try:
-        doc = Document(path)
-        for para in doc.paragraphs:
-            text += para.text + " "
-    except:
-        pass
-    return text.lower()
-
-
-def extract_text_from_xlsx(path):
-    text = ""
-    try:
-        wb = load_workbook(path, data_only=True)
-        for sheet in wb.worksheets:
-            for row in sheet.iter_rows(values_only=True):
-                for cell in row:
-                    if cell:
-                        text += str(cell) + " "
-    except:
-        pass
-    return text.lower()
-
-
-def extract_text_from_pptx(path):
-    text = ""
-    try:
-        prs = Presentation(path)
-        for slide in prs.slides:
-            for shape in slide.shapes:
-                if hasattr(shape, "text"):
-                    text += shape.text + " "
-    except:
-        pass
-    return text.lower()
-
-
-# ---------------- MAIN CLASSIFIER ---------------- #
-
-def extract_text(file_path):
-    ext = os.path.splitext(file_path)[1].lower()
-
-    if ext == ".pdf":
-        return extract_text_from_pdf(file_path)
-    elif ext == ".docx":
-        return extract_text_from_docx(file_path)
-    elif ext == ".xlsx":
-        return extract_text_from_xlsx(file_path)
-    elif ext == ".pptx":
-        return extract_text_from_pptx(file_path)
-    else:
-        return ""
-
-
+# ===============================
+# SMART ENRO / LGU CLASSIFIER
+# ===============================
 def classify_letter(file_path):
-    text = extract_text(file_path)
+    text = extract_text_from_pdf(file_path)
 
-    if any(word in text for word in ["invoice", "amount due", "billing", "payment due"]):
-        return "Invoice"
+    # -----------------------------
+    # NOTICE OF VIOLATION (High Priority)
+    # -----------------------------
+    if any(keyword in text for keyword in [
+        "notice of violation",
+        "violation",
+        "non-compliance",
+        "failure to comply",
+        "environmental violation",
+        "penalty",
+        "fine imposed"
+    ]):
+        return "Notice of Violation"
 
-    elif any(word in text for word in ["curriculum vitae", "resume", "education", "skills"]):
-        return "Resume"
+    # -----------------------------
+    # OFFICIAL RECEIPT
+    # -----------------------------
+    elif any(keyword in text for keyword in [
+        "official receipt",
+        "receipt no",
+        "or no",
+        "amount paid",
+        "cash received",
+        "payment received"
+    ]):
+        return "Official Receipt"
 
-    elif any(word in text for word in ["contract", "agreement", "terms and conditions"]):
-        return "Contract"
+    # -----------------------------
+    # MEMORANDUM
+    # -----------------------------
+    elif any(keyword in text for keyword in [
+        "memorandum",
+        "memo",
+        "for:",
+        "subject:",
+        "from:",
+        "date:"
+    ]):
+        return "Memorandum"
 
-    elif any(word in text for word in ["request letter", "i am writing to request", "approval"]):
-        return "Request Letter"
+    # -----------------------------
+    # CERTIFICATION
+    # -----------------------------
+    elif any(keyword in text for keyword in [
+        "certification",
+        "this is to certify",
+        "certify that",
+        "issued this",
+        "signed this"
+    ]):
+        return "Certification"
 
-    elif any(word in text for word in ["report", "summary report", "findings"]):
-        return "Report"
+    # -----------------------------
+    # ENVIRONMENTAL REPORT
+    # -----------------------------
+    elif any(keyword in text for keyword in [
+        "environmental report",
+        "inspection report",
+        "site inspection",
+        "monitoring report",
+        "compliance report",
+        "solid waste",
+        "waste management",
+        "environmental assessment",
+        "findings",
+        "recommendation"
+    ]):
+        return "Environmental Report"
 
     else:
         return "Uncategorized"

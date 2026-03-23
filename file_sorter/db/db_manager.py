@@ -1,6 +1,11 @@
+import os
 import sqlite3
 
-DB_NAME = "documents.db"
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_NAME = os.path.join(DATA_DIR, "documents.db")
 
 
 def connect_db():
@@ -13,27 +18,28 @@ def create_table():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS documents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            path TEXT UNIQUE,
-            source TEXT,
-            letter_type TEXT,
-            date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        path TEXT UNIQUE,
+        source TEXT,
+        letter_type TEXT,
+        tags TEXT,
+        date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+        """)
 
     conn.commit()
     conn.close()
 
 
-def insert_document(title, path, source, letter_type):
+def insert_document(title, path, source, letter_type, tags=""):
     conn = connect_db()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT OR IGNORE INTO documents (title, path, source, letter_type)
-        VALUES (?, ?, ?, ?)
-    """, (title, path, source, letter_type))
+        INSERT OR IGNORE INTO documents (title, path, source, letter_type, tags)
+        VALUES (?, ?, ?, ?, ?)
+    """, (title, path, source, letter_type, tags))
 
     conn.commit()
     conn.close()
@@ -44,7 +50,7 @@ def fetch_documents():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, title, path, source, letter_type, date_added
+        SELECT id, title, path, source, letter_type, tags, date_added
         FROM documents
     """)
 
@@ -95,7 +101,7 @@ def get_documents_by_category(category):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, title, path, source, letter_type, date_added
+        SELECT id, title, path, source, letter_type, tags, date_added
         FROM documents
         WHERE letter_type = ?
     """, (category,))
@@ -103,4 +109,5 @@ def get_documents_by_category(category):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
 
