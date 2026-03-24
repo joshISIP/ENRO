@@ -1,6 +1,11 @@
+import os
 import sqlite3
 
-DB_NAME = "documents.db"
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_NAME = os.path.join(DATA_DIR, "documents.db")
 
 
 def connect_db():
@@ -13,14 +18,14 @@ def create_table():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS documents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            path TEXT UNIQUE,
-            source TEXT,
-            letter_type TEXT,
-            date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        path TEXT UNIQUE,
+        source TEXT,
+        letter_type TEXT,
+        date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+        """)
 
     conn.commit()
     conn.close()
@@ -103,4 +108,5 @@ def get_documents_by_category(category):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
 
