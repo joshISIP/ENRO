@@ -10,12 +10,11 @@ def connect_db():
     return sqlite3.connect(DB_NAME)
 
 def get_monthly_stats(year=None, month=None):
-    \"\"\"Get file counts per letter_type for specific year/month or all time grouped by month.\"\"\"
+    "Get file counts per letter_type for specific year/month or all time grouped by month."
     conn = connect_db()
     cursor = conn.cursor()
     
     if year and month:
-        # Specific month: total by type
         cursor.execute("""
             SELECT letter_type, COUNT(*) as count
             FROM documents 
@@ -28,7 +27,6 @@ def get_monthly_stats(year=None, month=None):
         conn.close()
         return {month_str: dict(stats)}
     else:
-        # All months: total per month
         cursor.execute("""
             SELECT 
                 strftime('%Y-%m', date_added) as month,
@@ -37,55 +35,54 @@ def get_monthly_stats(year=None, month=None):
             FROM documents 
             GROUP BY month, letter_type
             ORDER BY month DESC, count DESC
-        ''')
+        """)
         stats = cursor.fetchall()
         result = {}
         for month, letter_type, count in stats:
             if month not in result:
                 result[month] = {}
             result[month][letter_type] = result[month].get(letter_type, 0) + count
+        conn.close()
         return result
-    
-    conn.close()
 
 def get_total_scanned_per_month():
-    \"\"\"Total files per month.\"\"\"
+    "Total files per month."
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute('''
+    cursor.execute("""
         SELECT strftime('%Y-%m', date_added) as month, COUNT(*) as total
         FROM documents 
         GROUP BY month
         ORDER BY month DESC
-    ''')
+    """)
     totals = cursor.fetchall()
     conn.close()
     return dict(totals)
 
 def print_monthly_report(year=None, month=None):
-    \"\"\"Print formatted monthly stats report.\"\"\"
+    "Print formatted monthly stats report."
     if year and month:
         stats = get_monthly_stats(year, month)
-        month_str = f\"{year}-{month:02d}\"
     else:
         stats = get_monthly_stats()
     
     totals = get_total_scanned_per_month()
     
-    print("=== Monthly Scanned Files Statistics ===")
+    report = "=== Monthly Scanned Files Statistics ===\\n"
     if totals:
-        print("Total files per month:")
+        report += "Total files per month:\\n"
         for month, total in sorted(totals.items(), reverse=True):
-            print(f"  {month}: {total} files")
-        print()
+            report += f"  {month}: {total} files\\n"
+        report += "\\n"
     
     for month, categories in stats.items():
-        print(f"{month} - Breakdown by category:")
+        report += f"{month} - Breakdown by category:\\n"
         for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
-            print(f"  {cat}: {count}")
-        print()
+            report += f"  {cat}: {count}\\n"
+        report += "\\n"
+    
+    print(report)
+    return report
 
-# Example usage:
-# print_monthly_report(2026, 3)
-# print_monthly_report()  # All months
+# Example: print_monthly_report(2026, 3)
 

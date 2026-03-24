@@ -23,7 +23,6 @@ def create_table():
         path TEXT UNIQUE,
         source TEXT,
         letter_type TEXT,
-        tags TEXT,
         date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
@@ -32,14 +31,14 @@ def create_table():
     conn.close()
 
 
-def insert_document(title, path, source, letter_type, tags=""):
+def insert_document(title, path, source, letter_type):
     conn = connect_db()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT OR IGNORE INTO documents (title, path, source, letter_type, tags)
-        VALUES (?, ?, ?, ?, ?)
-    """, (title, path, source, letter_type, tags))
+        INSERT OR IGNORE INTO documents (title, path, source, letter_type)
+        VALUES (?, ?, ?, ?)
+    """, (title, path, source, letter_type))
 
     conn.commit()
     conn.close()
@@ -50,7 +49,7 @@ def fetch_documents():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, title, path, source, letter_type, tags, date_added
+        SELECT id, title, path, source, letter_type, date_added
         FROM documents
     """)
 
@@ -101,7 +100,7 @@ def get_documents_by_category(category):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, title, path, source, letter_type, tags, date_added
+        SELECT id, title, path, source, letter_type, date_added
         FROM documents
         WHERE letter_type = ?
     """, (category,))
